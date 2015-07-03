@@ -44,7 +44,7 @@ def return_parser():
     return parser
 
 
-def main(arguments):
+def main():
     # TODO: Make a configuration file to handle file names and directory information
     user_directory = os.path.expanduser('~')
     logfind_file = os.path.join(user_directory, '.logfind')
@@ -55,10 +55,10 @@ def main(arguments):
     with open(logfind_file, 'r') as f:
         log_files = list(filter(None, f.read().splitlines()))
 
-    files_found = search_files(log_files, arguments)
+    files_found = search_files(log_files, sys.argv[1:])
     print('\n'.join('{}'.format(f) for f in files_found))
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main())

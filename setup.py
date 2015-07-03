@@ -16,6 +16,6 @@ setup(
     packages=['logfind'],
     license='CC 1.0 Universal',
     entry_points={
-        'console_scripts': ['logfind=logfind:main']
+        'console_scripts': ['logfind=logfind.logfind:main']
     }
 )
