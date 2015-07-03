@@ -14,5 +14,8 @@ setup(
     description='A log searching tool',
     install_requires=['nose'],
     packages=['logfind'],
-    scripts=[],
+    license='CC 1.0 Universal',
+    entry_points={
+        'console_scripts': ['logfind=logfind:main']
+    }
 )
