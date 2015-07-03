@@ -3,8 +3,8 @@
 import sys
 import os
 import re
-import fileinput
 import argparse
+import mmap
 
 
 def search_files(log_files, arguments):
@@ -12,29 +12,35 @@ def search_files(log_files, arguments):
     parsed_arguments = parser.parse_args(arguments)
     files = []
 
-    with fileinput.input(files=log_files) as f:
-        for line in f:
-            if search_method(parsed_arguments, line):
-                # print("{0} in file {1}".format(line, fileinput.filename()))
-                # print(fileinput.filename())
-                files.append(fileinput.filename())
-                fileinput.nextfile()
+    for log_file in log_files:
+        try:
+            with open(log_file, 'r') as f:
+                with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as m:
+                    if find_words(parsed_arguments, m):
+                        files.append(log_file)
+        except FileNotFoundError as e:
+            print(e)
+            next
     return files
 
 
-def search_method(parsed_arguments, line):
+def find_words(parsed_arguments, text):
+    boundery = lambda s: b'\\b' + s + b'\\b'
+
     if parsed_arguments.o:
-        regex = "(\\b" + "\\b|\\b".join(parsed_arguments.search_words) + "\\b)"
+        regex = parsed_arguments.search_words
+        result = any(re.search(boundery(word), text) for word in regex)
     else:
-        # NOTE: This is a long operation. Perhaps use any and all instead?
-        regex = "(?=.*\\b" + "\\b)(?=.*\\b".join(parsed_arguments.search_words) + "\\b)"
-    return re.search(regex, line)
+        regex = parsed_arguments.search_words
+        result = all(re.search(boundery(word), text) for word in regex)
+    return result
 
 
 def return_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", help="perform an OR search", action="store_true")
-    parser.add_argument("search_words", help="words that will be searched for", nargs='+')
+    parser.add_argument("search_words", help="words that will be searched for", nargs='+',
+                        type=lambda x: x.encode('utf-8'))
     return parser
 
 
@@ -43,14 +49,11 @@ def main(arguments):
     user_directory = os.path.expanduser('~')
     logfind_file = os.path.join(user_directory, '.logfind')
 
-    with open(logfind_file, 'r') as f:
-        # TODO: Don't include empty lines into the list
-        log_files = f.read().splitlines()
-
     if not os.path.isfile(logfind_file):
         sys.exit("No .logfind file exists. Please create one.")
 
-    # TODO: Check if the files in the .logfind file exist
+    with open(logfind_file, 'r') as f:
+        log_files = list(filter(None, f.read().splitlines()))
 
     files_found = search_files(log_files, arguments)
     print('\n'.join('{}'.format(f) for f in files_found))
